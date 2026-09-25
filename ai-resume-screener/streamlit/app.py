@@ -1,4 +1,4 @@
-
+import os
 import requests
 import streamlit as st
 
@@ -230,9 +230,6 @@ def normalize_batch_response(data):
         ):
             continue
 
-        # Status is informative only.
-        # We do not reject a result because of
-        # SUCCESS/success capitalization.
         filename = (
             item.get("filename")
             or screening.get(
@@ -400,7 +397,6 @@ def normalize_single_response(
             "raw": data,
         }]
 
-
     return []
 
 
@@ -506,9 +502,24 @@ with st.sidebar:
         "Screening Settings"
     )
 
+    default_backend_url = "https://ai-resume-screener-nine-wheat.vercel.app"
+    try:
+        if "FASTAPI_URL" in st.secrets:
+            default_backend_url = st.secrets["FASTAPI_URL"]
+        elif "API_URL" in st.secrets:
+            default_backend_url = st.secrets["API_URL"]
+    except Exception:
+        pass
+
+    if not default_backend_url:
+        default_backend_url = os.environ.get("FASTAPI_URL") or os.environ.get(
+            "API_URL", "https://ai-resume-screener-nine-wheat.vercel.app"
+        )
+
     api_url = st.text_input(
         "FastAPI URL",
-        value="http://127.0.0.1:8000",
+        value=default_backend_url,
+        help="FastAPI backend URL hosted on Vercel or locally",
     ).strip().rstrip("/")
 
     similar_top_k = st.slider(
