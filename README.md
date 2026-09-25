@@ -37,24 +37,19 @@ An intelligent, machine-learning-powered resume screening and candidate ranking 
 
 ## 🌐 Cloud Deployment Architecture
 
-| Component | Platform | Configuration |
+| Component | Platform | URL / Configuration |
 | :--- | :--- | :--- |
-| **Backend API** | [Render](https://render.com/) | Docker Web Service (`Dockerfile`) |
+| **Backend API** | [Render](https://render.com/) | `https://ai-resume-screening-ik9s.onrender.com` |
 | **Frontend UI** | [Streamlit Cloud](https://share.streamlit.io/) | Python app (`streamlit_app.py`) |
 
-### 1. Deploy the Backend on Render
+### 1. Backend Service on Render
 
-1. Sign in to [Render](https://dashboard.render.com/) with your GitHub account.
-2. Click **New +** > **Web Service**.
-3. Connect your repository: `2006pritam/AI_Resume-_Screening`.
-4. Render will detect the `Dockerfile` automatically:
-   - **Environment:** Docker
-   - **Instance Type:** Free
-   - **Region:** Singapore (or nearest)
-5. Click **Deploy Web Service**.
-6. Once deployed, copy your Render service URL (e.g., `https://ai-resume-screener-api.onrender.com`).
+Your live backend service is hosted at:
+```text
+https://ai-resume-screening-ik9s.onrender.com
+```
 
-### 2. Deploy the Frontend on Streamlit Community Cloud
+### 2. Frontend on Streamlit Community Cloud
 
 1. Sign in to [Streamlit Community Cloud](https://share.streamlit.io/).
 2. Click **Create app**.
@@ -62,9 +57,9 @@ An intelligent, machine-learning-powered resume screening and candidate ranking 
    - **Repository:** `2006pritam/AI_Resume-_Screening`
    - **Branch:** `main`
    - **Main file path:** `streamlit_app.py`
-4. Under **Advanced settings** > **Secrets**, add:
+4. Under **Advanced settings** > **Secrets**, set:
    ```toml
-   FASTAPI_URL = "https://your-render-service-name.onrender.com"
+   FASTAPI_URL = "https://ai-resume-screening-ik9s.onrender.com"
    ```
 5. Click **Deploy!**.
 

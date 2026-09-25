@@ -502,7 +502,7 @@ with st.sidebar:
         "Screening Settings"
     )
 
-    default_backend_url = "https://ai-resume-screener-api.onrender.com"
+    default_backend_url = "https://ai-resume-screening-ik9s.onrender.com"
     try:
         if "FASTAPI_URL" in st.secrets:
             default_backend_url = st.secrets["FASTAPI_URL"]
@@ -518,7 +518,7 @@ with st.sidebar:
             os.environ.get("FASTAPI_URL")
             or os.environ.get("RENDER_URL")
             or os.environ.get("API_URL")
-            or "https://ai-resume-screener-api.onrender.com"
+            or "https://ai-resume-screening-ik9s.onrender.com"
         )
 
     api_url = st.text_input(

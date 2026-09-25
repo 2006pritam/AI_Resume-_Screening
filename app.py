@@ -8,8 +8,8 @@ from pathlib import Path
 import runpy
 
 # Ensure default backend URL points to the Render service
-os.environ.setdefault("FASTAPI_URL", "https://ai-resume-screener-api.onrender.com")
-os.environ.setdefault("RENDER_URL", "https://ai-resume-screener-api.onrender.com")
+os.environ.setdefault("FASTAPI_URL", "https://ai-resume-screening-ik9s.onrender.com")
+os.environ.setdefault("RENDER_URL", "https://ai-resume-screening-ik9s.onrender.com")
 
 REPO_ROOT = Path(__file__).resolve().parent
 STREAMLIT_APP_DIR = REPO_ROOT / "ai-resume-screener" / "streamlit"

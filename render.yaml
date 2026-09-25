@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: ai-resume-screener-api
+    name: ai-resume-screening-ik9s
     env: docker
     dockerfilePath: Dockerfile
     plan: free
