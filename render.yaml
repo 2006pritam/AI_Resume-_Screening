@@ -4,5 +4,6 @@ services:
     env: docker
     dockerfilePath: Dockerfile
     plan: free
+    region: singapore
     healthCheckPath: /health
     autoDeploy: true

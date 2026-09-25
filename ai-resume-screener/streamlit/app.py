@@ -502,24 +502,29 @@ with st.sidebar:
         "Screening Settings"
     )
 
-    default_backend_url = "https://ai-resume-screener-nine-wheat.vercel.app"
+    default_backend_url = "https://ai-resume-screener-api.onrender.com"
     try:
         if "FASTAPI_URL" in st.secrets:
             default_backend_url = st.secrets["FASTAPI_URL"]
+        elif "RENDER_URL" in st.secrets:
+            default_backend_url = st.secrets["RENDER_URL"]
         elif "API_URL" in st.secrets:
             default_backend_url = st.secrets["API_URL"]
     except Exception:
         pass
 
     if not default_backend_url:
-        default_backend_url = os.environ.get("FASTAPI_URL") or os.environ.get(
-            "API_URL", "https://ai-resume-screener-nine-wheat.vercel.app"
+        default_backend_url = (
+            os.environ.get("FASTAPI_URL")
+            or os.environ.get("RENDER_URL")
+            or os.environ.get("API_URL")
+            or "https://ai-resume-screener-api.onrender.com"
         )
 
     api_url = st.text_input(
         "FastAPI URL",
         value=default_backend_url,
-        help="FastAPI backend URL hosted on Vercel or locally",
+        help="FastAPI backend URL hosted on Render or locally",
     ).strip().rstrip("/")
 
     similar_top_k = st.slider(
