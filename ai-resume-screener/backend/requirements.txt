@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+python-multipart
+pymupdf
+python-docx
+pandas
+numpy
+scipy
+scikit-learn==1.9.1
+joblib
+spacy
+faiss-cpu
+pydantic
+onnxruntime
+tokenizers
