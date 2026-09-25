@@ -13,3 +13,5 @@ faiss-cpu
 pydantic
 onnxruntime
 tokenizers
+sqlalchemy>=2.0.0
+psycopg[binary]>=3.1.0
