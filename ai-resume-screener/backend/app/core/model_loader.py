@@ -1,26 +1,26 @@
-
+import gc
 import json
 from functools import lru_cache
 
 import faiss
 import joblib
-from app.core.onnx_embedding import ONNXEmbeddingModel
 
 from app.core.config import (
-    RESUMES_FILE,
-    JOBS_FILE,
-    FAISS_INDEX_FILE,
-    RANDOM_FOREST_FILE,
-    FEATURE_COLUMNS_FILE,
-    KMEANS_FILE,
-    IMPUTATION_VALUES_FILE,
-    SKILL_NORMALIZATION_FILE,
-    EMBEDDING_MODEL_NAME,
     EMBEDDING_DIMENSION,
+    EMBEDDING_MODEL_NAME,
+    EXPECTED_FAISS_VECTORS,
     EXPECTED_FEATURE_COUNT,
     EXPECTED_KMEANS_CLUSTERS,
-    EXPECTED_FAISS_VECTORS,
+    FAISS_INDEX_FILE,
+    FEATURE_COLUMNS_FILE,
+    IMPUTATION_VALUES_FILE,
+    JOBS_FILE,
+    KMEANS_FILE,
+    RANDOM_FOREST_FILE,
+    RESUMES_FILE,
+    SKILL_NORMALIZATION_FILE,
 )
+from app.core.onnx_embedding import ONNXEmbeddingModel
 
 
 def _load_artifact(path):
@@ -28,9 +28,33 @@ def _load_artifact(path):
     return joblib.load(path)
 
 
-def _load_json(path):
+def _load_resumes_compact(path):
+    """Load resumes while keeping only candidate_id and filename to drastically reduce RAM usage."""
     with open(path, "r", encoding="utf-8") as file:
-        return json.load(file)
+        data = json.load(file)
+
+    compact = []
+    for item in data:
+        if isinstance(item, dict):
+            compact.append({
+                "candidate_id": item.get("candidate_id") or item.get("resume_id") or item.get("id"),
+                "filename": item.get("filename") or item.get("file_name") or item.get("resume_filename") or "Resume",
+            })
+        else:
+            compact.append(item)
+    del data
+    gc.collect()
+    return compact
+
+
+def _load_jobs_compact(path):
+    """Load jobs lightweight structure for count retrieval."""
+    with open(path, "r", encoding="utf-8") as file:
+        data = json.load(file)
+    count = len(data) if isinstance(data, list) else 0
+    del data
+    gc.collect()
+    return [{"id": i} for i in range(count)]
 
 
 @lru_cache(maxsize=1)
@@ -60,11 +84,11 @@ def get_model_bundle():
         )
 
     # --------------------------------------------------------
-    # JSON
+    # JSON (Memory-optimized)
     # --------------------------------------------------------
 
-    resumes = _load_json(RESUMES_FILE)
-    jobs = _load_json(JOBS_FILE)
+    resumes = _load_resumes_compact(RESUMES_FILE)
+    jobs = _load_jobs_compact(JOBS_FILE)
 
     # --------------------------------------------------------
     # FAISS
@@ -104,28 +128,28 @@ def get_model_bundle():
 
     embedding_model = ONNXEmbeddingModel()
 
+    # Force garbage collection to free initial loading buffers
+    gc.collect()
+
     # --------------------------------------------------------
     # Artifact validation
     # --------------------------------------------------------
 
     if len(feature_columns) != EXPECTED_FEATURE_COUNT:
         raise ValueError(
-            "Unexpected feature count: "
-            f"{len(feature_columns)}; "
+            f"Unexpected feature count: {len(feature_columns)}; "
             f"expected {EXPECTED_FEATURE_COUNT}"
         )
 
     if faiss_index.d != EMBEDDING_DIMENSION:
         raise ValueError(
-            "Unexpected FAISS dimension: "
-            f"{faiss_index.d}; "
+            f"Unexpected FAISS dimension: {faiss_index.d}; "
             f"expected {EMBEDDING_DIMENSION}"
         )
 
     if faiss_index.ntotal != EXPECTED_FAISS_VECTORS:
         raise ValueError(
-            "Unexpected FAISS vector count: "
-            f"{faiss_index.ntotal}; "
+            f"Unexpected FAISS vector count: {faiss_index.ntotal}; "
             f"expected {EXPECTED_FAISS_VECTORS}"
         )
 
@@ -133,8 +157,7 @@ def get_model_bundle():
         EXPECTED_KMEANS_CLUSTERS
     ):
         raise ValueError(
-            "Unexpected KMeans cluster count: "
-            f"{getattr(kmeans_model, 'n_clusters', None)}; "
+            f"Unexpected KMeans cluster count: {getattr(kmeans_model, 'n_clusters', None)}; "
             f"expected {EXPECTED_KMEANS_CLUSTERS}"
         )
 
@@ -144,8 +167,7 @@ def get_model_bundle():
 
     if embedding_dimension != EMBEDDING_DIMENSION:
         raise ValueError(
-            "Unexpected embedding dimension: "
-            f"{embedding_dimension}; "
+            f"Unexpected embedding dimension: {embedding_dimension}; "
             f"expected {EMBEDDING_DIMENSION}"
         )
 

@@ -1,4 +1,3 @@
-
 from pathlib import Path
 
 import numpy as np
@@ -29,8 +28,14 @@ class ONNXEmbeddingModel:
                 f"Tokenizer not found: {TOKENIZER_PATH}"
             )
 
+        sess_options = ort.SessionOptions()
+        sess_options.intra_op_num_threads = 1
+        sess_options.inter_op_num_threads = 1
+        sess_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
+
         self.session = ort.InferenceSession(
             str(MODEL_PATH),
+            sess_options=sess_options,
             providers=["CPUExecutionProvider"],
         )
 
@@ -122,9 +127,6 @@ class ONNXEmbeddingModel:
             dtype=np.float32,
         )
 
-        # Match SentenceTransformer behavior:
-        # string input -> (384,)
-        # list input   -> (batch, 384)
         if single_input:
             return embeddings[0]
 
