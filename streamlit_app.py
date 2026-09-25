@@ -1,11 +1,15 @@
-"""Streamlit deployment entrypoint for AI Resume Screening & Candidate Clustering.
-
+"""
+Streamlit deployment entrypoint for AI Resume Screening & Candidate Clustering.
 This script delegates execution to the Streamlit app in ai-resume-screener/streamlit/app.py.
 """
-
+import os
 import sys
 from pathlib import Path
 import runpy
+
+# Ensure default backend URL points to the Render service
+os.environ.setdefault("FASTAPI_URL", "https://ai-resume-screener-api.onrender.com")
+os.environ.setdefault("RENDER_URL", "https://ai-resume-screener-api.onrender.com")
 
 # Resolve paths relative to this repository root
 REPO_ROOT = Path(__file__).resolve().parent
