@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import random
+from html import escape
 
 import altair as alt
 import pandas as pd
@@ -64,7 +65,7 @@ st.set_page_config(
     page_title="AI Resume Screener",
     page_icon="📄",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",
 )
 
 
@@ -99,29 +100,95 @@ CSS = """
 :root {
     --bg: #F4F7FB;
     --card: #FFFFFF;
-    --border: #E6EBF2;
+    --border: #D7DFEA;
     --text: #0F172A;
-    --muted: #64748B;
+    --muted: #475569;
     --blue: #2563EB;
-    --purple: #7C5CFC;
-    --green: #16A34A;
+    --purple: #6D28D9;
+    --green: #15803D;
     --amber: #D97706;
 }
 
-html, body, .stApp, [class*="css"] {
+html, body, .stApp, .stApp input, .stApp textarea, .stApp button,
+.stApp [data-testid="stMarkdownContainer"] {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-.stApp, [data-testid="stAppViewContainer"] { background: var(--bg); }
-[data-testid="stHeader"] { background: transparent; height: 0; }
+.stApp, [data-testid="stAppViewContainer"] { background: var(--bg); color: var(--text); }
+[data-testid="stHeader"] { background: var(--bg); }
 [data-testid="stToolbar"] { right: 8px; }
 footer, #MainMenu { visibility: hidden; }
 
 .block-container {
-    padding-top: 1.4rem;
+    padding-top: 4.5rem;
     padding-bottom: 3rem;
     max-width: 1400px;
 }
+
+/* Pair native widget text with the light surfaces used by this dashboard.
+   This also keeps controls readable when a saved Streamlit theme is dark. */
+[data-testid="stWidgetLabel"], [data-testid="stMarkdown"],
+[data-testid="stMetric"], [data-testid="stExpander"] summary,
+[data-testid="stFileUploaderFile"], [data-testid="stHeading"] :is(h1, h2, h3) {
+    color: var(--text);
+}
+[data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p,
+[data-testid="stWidgetLabel"] p {
+    color: var(--muted);
+}
+[data-testid="stCaptionContainer"] { opacity: 1; }
+[data-testid="stSliderThumbValue"], [data-testid="stSliderTickBar"] { color: var(--blue); }
+[data-testid="stHeader"] button { color: var(--text); }
+[data-testid="stSidebarCollapseButton"] :is(button, span),
+[data-testid="stExpandSidebarButton"] span { color: var(--muted); }
+[data-testid="stWidgetLabel"] p { font-weight: 600; }
+.stApp [data-baseweb="input"], .stApp [data-baseweb="textarea"],
+.stApp [data-baseweb="select"] > div {
+    background: var(--card);
+    color: var(--text);
+    border-color: #94A3B8;
+    border-radius: 9px;
+}
+.stApp input:not([type="file"]), .stApp textarea {
+    background: var(--card);
+    color: var(--text);
+    -webkit-text-fill-color: var(--text);
+    caret-color: var(--blue);
+    color-scheme: light;
+}
+.stApp input::placeholder, .stApp textarea::placeholder {
+    color: var(--muted);
+    -webkit-text-fill-color: var(--muted);
+    opacity: 1;
+}
+.stApp [data-baseweb="select"] :is(div, input, svg) { color: var(--text); }
+.stApp [data-baseweb="select"] svg { fill: currentColor; }
+[data-baseweb="popover"] [role="listbox"],
+[data-baseweb="popover"] [role="option"] {
+    background: var(--card);
+    color: var(--text);
+}
+[data-baseweb="popover"] [role="option"]:is(:hover, [aria-selected="true"]) {
+    background: #EAF1FE;
+}
+.stApp [data-baseweb="input"]:focus-within,
+.stApp [data-baseweb="textarea"]:focus-within,
+.stApp [data-baseweb="select"]:focus-within > div {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 2px #DBEAFE;
+}
+.stApp button [data-testid="stMarkdownContainer"] { color: inherit; }
+.stApp button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+[data-testid="stMetricLabel"] p, [data-testid="stMetricValue"],
+[data-testid="stMetricValue"] > div {
+    color: var(--text);
+    white-space: normal;
+    overflow-wrap: anywhere;
+    overflow: visible;
+    text-overflow: clip;
+}
+[data-testid="stMetricValue"] { font-size: clamp(1.25rem, 2.2vw, 2rem); line-height: 1.35; }
+[data-testid="stMetricLabel"] { height: auto; min-height: 1.5rem; }
 
 /* ---------------- sidebar ---------------- */
 section[data-testid="stSidebar"] {
@@ -132,7 +199,7 @@ section[data-testid="stSidebar"] > div { padding-top: 1.1rem; }
 
 .brand { display: flex; align-items: center; gap: 10px; padding: 2px 4px 18px 4px; }
 .brand-logo {
-    width: 34px; height: 34px; border-radius: 9px;
+    width: 34px; height: 34px; flex-shrink: 0; border-radius: 9px;
     background: linear-gradient(135deg, #3B82F6, #2563EB);
     display: flex; align-items: center; justify-content: center;
     color: #fff; font-size: 17px; font-weight: 700;
@@ -140,8 +207,8 @@ section[data-testid="stSidebar"] > div { padding-top: 1.1rem; }
 .brand-name { font-size: 16px; font-weight: 700; color: var(--text); letter-spacing: -0.2px; }
 
 .nav-label {
-    font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
-    text-transform: uppercase; color: #94A3B8;
+    font-size: 12px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted);
     padding: 6px 6px 8px 6px;
 }
 
@@ -187,6 +254,7 @@ section[data-testid="stSidebar"] [data-testid="stBaseButton-primary"] {
 /* ---------------- top header ---------------- */
 .topbar {
     display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
     background: #FFFFFF; border: 1px solid var(--border); border-radius: 14px;
     padding: 12px 18px; margin-bottom: 18px;
 }
@@ -217,6 +285,7 @@ section[data-testid="stSidebar"] [data-testid="stBaseButton-primary"] {
     margin: 0 0 10px 0; letter-spacing: -0.5px; line-height: 1.25;
 }
 .hero p { font-size: 14.5px; color: var(--muted); margin: 0; max-width: 520px; line-height: 1.65; }
+.hero > div:first-child { min-width: 0; }
 
 .illus { position: relative; width: 210px; height: 140px; flex: 0 0 auto; }
 .illus-doc {
@@ -241,27 +310,44 @@ section[data-testid="stSidebar"] [data-testid="stBaseButton-primary"] {
 .illus-blob.b3 { width: 22px; height: 22px; left: 4px; bottom: 6px; background: #E0E7FF; }
 
 /* ---------------- cards ---------------- */
-[data-testid="stVerticalBlockBorderWrapper"]:has(> div > div > [data-testid="stVerticalBlock"]) {
-    background: transparent;
-}
-div[data-testid="stVerticalBlockBorderWrapper"] {
+div[data-testid="stVerticalBlockBorderWrapper"],
+[data-testid="stVerticalBlock"][data-test-scroll-behavior="normal"] {
     background: #FFFFFF;
     border: 1px solid var(--border) !important;
     border-radius: 14px;
     padding: 20px 22px;
 }
 
-.card-title { font-size: 15.5px; font-weight: 600; color: var(--text); margin: 0 0 4px 0; }
-.card-sub { font-size: 12.5px; color: var(--muted); margin: 0 0 12px 0; }
-.card-hint { font-size: 12px; color: #94A3B8; margin: 6px 0 0 0; }
+.card-title { font-size: 17px; font-weight: 600; color: var(--text); margin: 0 0 4px 0; line-height: 1.5; }
+.card-sub { font-size: 14px; color: var(--muted); margin: 0 0 12px 0; line-height: 1.6; }
+.card-hint { font-size: 13px; color: var(--muted); margin: 6px 0 0 0; }
+.card-title, .card-sub, .td, .td-strong, .td-muted, .skill-chip { overflow-wrap: anywhere; }
 
 /* file uploader as a drop zone */
 [data-testid="stFileUploaderDropzone"] {
     background: #F8FAFC;
+    color: var(--text);
+    flex-direction: row;
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 104px;
+    gap: 12px;
     border: 1.5px dashed #CBD5E1;
     border-radius: 12px;
     padding: 14px 16px;
 }
+[data-testid="stFileUploaderDropzoneInstructions"] { min-width: 0; flex: 1 1 180px; }
+[data-testid="stFileUploaderDropzoneInstructions"] > div { min-width: 0; }
+[data-testid="stFileUploaderDropzoneInstructions"] :is(span, small),
+[data-testid="stFileUploaderFileName"] {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    overflow: visible;
+    text-overflow: clip;
+}
+[data-testid="stFileUploaderDropzoneInstructions"] span { color: var(--text); }
+[data-testid="stFileUploaderDropzoneInstructions"] small,
+[data-testid="stFileUploaderDropzoneInstructions"] > div > span:last-child { color: var(--muted); }
 [data-testid="stFileUploaderDropzone"]:hover { border-color: var(--blue); background: #F5F9FF; }
 [data-testid="stFileUploaderDropzone"] button {
     background: var(--blue) !important;
@@ -269,6 +355,7 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
     border: none !important;
     border-radius: 9px !important;
     font-weight: 600 !important;
+    flex-shrink: 0;
 }
 div[data-testid="stColumn"]:nth-of-type(2) [data-testid="stFileUploaderDropzone"] button,
 div[data-testid="column"]:nth-of-type(2) [data-testid="stFileUploaderDropzone"] button {
@@ -276,20 +363,20 @@ div[data-testid="column"]:nth-of-type(2) [data-testid="stFileUploaderDropzone"] 
 }
 
 /* main-area primary button = green action */
-.block-container button[kind="primary"],
-.block-container [data-testid="stBaseButton-primary"] {
+.block-container .stButton > button[kind="primary"],
+.block-container .stButton > [data-testid="stBaseButton-primary"] {
     background: var(--green) !important;
     border: none !important;
     color: #fff !important;
     border-radius: 9px !important;
     font-weight: 600 !important;
 }
-.block-container button[kind="primary"]:hover,
-.block-container [data-testid="stBaseButton-primary"]:hover {
-    background: #15803D !important;
+.block-container .stButton > button[kind="primary"]:hover,
+.block-container .stButton > [data-testid="stBaseButton-primary"]:hover {
+    background: #166534 !important;
 }
-.block-container button[kind="secondary"],
-.block-container [data-testid="stBaseButton-secondary"] {
+.block-container .stButton > button[kind="secondary"],
+.block-container .stButton > [data-testid="stBaseButton-secondary"] {
     border: 1px solid var(--border) !important;
     background: #FFFFFF !important;
     color: #334155 !important;
@@ -298,20 +385,20 @@ div[data-testid="column"]:nth-of-type(2) [data-testid="stFileUploaderDropzone"] 
 }
 
 /* ---------------- stat cards ---------------- */
-.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 4px 0 20px 0; }
-.stat { border-radius: 14px; padding: 18px 20px; border: 1px solid transparent; }
-.stat-top { display: flex; align-items: center; justify-content: space-between; }
-.stat-label { font-size: 12.5px; font-weight: 500; color: #475569; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 16px; margin: 4px 0 20px 0; }
+.stat { min-width: 0; border-radius: 14px; padding: 18px 20px; border: 1px solid transparent; }
+.stat-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.stat-label { font-size: 14px; font-weight: 500; color: var(--muted); }
 .stat-icon { font-size: 18px; opacity: .9; }
 .stat-value { font-size: 30px; font-weight: 700; color: var(--text); margin-top: 6px; letter-spacing: -0.5px; }
-.stat-foot { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+.stat-foot { font-size: 13px; color: var(--muted); margin-top: 3px; }
 .stat.blue   { background: #EFF6FF; border-color: #DBEAFE; }
 .stat.green  { background: #F0FDF4; border-color: #DCFCE7; }
 .stat.amber  { background: #FFFBEB; border-color: #FDE68A; }
 .stat.purple { background: #F5F3FF; border-color: #EDE9FE; }
 
 .mini-pill {
-    display: inline-block; font-size: 11px; font-weight: 600;
+    display: inline-block; font-size: 12px; font-weight: 600;
     padding: 2px 8px; border-radius: 999px; background: #DCFCE7; color: #15803D;
 }
 
@@ -326,17 +413,23 @@ div[data-testid="column"]:nth-of-type(2) [data-testid="stFileUploaderDropzone"] 
 .pill-grey  { background: #F1F5F9; color: #475569; }
 
 .th {
-    font-size: 11.5px; font-weight: 600; letter-spacing: .05em;
-    text-transform: uppercase; color: #94A3B8; padding-bottom: 2px;
+    font-size: 12px; font-weight: 600; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--muted); padding-bottom: 2px;
 }
+.candidate-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+    gap: 16px; padding: 8px 0 12px;
+}
+.candidate-row > div { min-width: 0; }
 .td { font-size: 13.5px; color: #334155; padding-top: 7px; }
 .td-strong { font-size: 13.5px; font-weight: 600; color: var(--text); padding-top: 7px; }
 .td-muted { font-size: 12.5px; color: var(--muted); padding-top: 8px; }
 .rowline { border-top: 1px solid #F1F5F9; margin: 6px 0 0 0; }
 
 .legend { display: flex; flex-direction: column; gap: 9px; padding-top: 6px; }
-.legend-row { display: flex; align-items: center; gap: 9px; font-size: 13px; color: #334155; }
-.legend-swatch { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+.legend-row { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; font-size: 13px; color: #334155; }
+.legend-swatch { width: 11px; height: 11px; flex-shrink: 0; border-radius: 50%; display: inline-block; }
 .legend-count { color: var(--muted); font-size: 12.5px; margin-left: auto; }
 
 .empty {
@@ -355,6 +448,24 @@ div[data-testid="stExpander"] details {
     border: 1px solid var(--border); border-radius: 12px; background: #FFFFFF;
 }
 hr { border-color: #EDF2F7; }
+
+@media (max-width: 1100px) {
+    .hero { padding: 24px; gap: 16px; }
+    .hero h1 { font-size: 26px; }
+    .illus { display: none; }
+}
+@media (max-width: 640px) {
+    .block-container { padding: 4.5rem 1rem 2rem; }
+    .hero { padding: 22px 18px; }
+    .hero h1 { font-size: 25px; }
+    .topbar { padding: 12px 14px; }
+    div[data-testid="stVerticalBlockBorderWrapper"],
+    [data-testid="stVerticalBlock"][data-test-scroll-behavior="normal"] { padding: 16px; }
+    [data-testid="stFileUploaderDropzone"] { padding: 14px; }
+    [data-testid="stFileUploaderDropzoneInstructions"] { flex: 0 1 auto; }
+    [data-testid="stFileUploaderDropzone"] > span { width: 100%; }
+    [data-testid="stFileUploaderDropzone"] button { width: 100%; }
+}
 </style>
 """
 
@@ -753,31 +864,28 @@ def render_candidate_table(results, limit=None, key_prefix="row"):
     if limit:
         rows = rows[:limit]
 
-    header = st.columns([0.5, 2.4, 1.5, 1.4, 3.2, 1.2])
-    for column, title in zip(
-        header, ["#", "Name", "Match Score", "Experience", "Key Skills", "Actions"]
-    ):
-        column.markdown(f'<div class="th">{title}</div>', unsafe_allow_html=True)
-    st.markdown('<div class="rowline"></div>', unsafe_allow_html=True)
-
     for index, result in enumerate(rows, start=1):
         score = to_unit_score(result.get("match_score"))
         score_text = f"{score:.2f}" if score is not None else "N/A"
         skills = result.get("matched_skills") or []
         skills_text = ", ".join(str(skill) for skill in skills[:3]) or "—"
 
-        cols = st.columns([0.5, 2.4, 1.5, 1.4, 3.2, 1.2])
-        cols[0].markdown(f'<div class="td-muted">{index}</div>', unsafe_allow_html=True)
-        cols[1].markdown(
-            f'<div class="td-strong">{candidate_name(result)}</div>', unsafe_allow_html=True
-        )
-        cols[2].markdown(
-            f'<div class="td"><span class="pill {pill_class(score)}">{score_text}</span></div>',
+        # Keep labels beside their values when rows wrap on narrow screens.
+        cols = st.columns([6, 1])
+        cols[0].markdown(
+            '<div class="candidate-row">'
+            '<div><div class="th">Name</div>'
+            f'<div class="td-strong">{index}. {escape(candidate_name(result))}</div></div>'
+            '<div><div class="th">Match Score</div>'
+            f'<div class="td"><span class="pill {pill_class(score)}">{score_text}</span></div></div>'
+            '<div><div class="th">Experience</div>'
+            f'<div class="td">{escape(experience_text(result))}</div></div>'
+            '<div><div class="th">Key Skills</div>'
+            f'<div class="td">{escape(skills_text)}</div></div>'
+            '</div>',
             unsafe_allow_html=True,
         )
-        cols[3].markdown(f'<div class="td">{experience_text(result)}</div>', unsafe_allow_html=True)
-        cols[4].markdown(f'<div class="td">{skills_text}</div>', unsafe_allow_html=True)
-        with cols[5]:
+        with cols[1]:
             if st.button("View", key=f"{key_prefix}_{index}", use_container_width=True):
                 st.session_state["selected_candidate"] = result.get("resume_filename")
                 st.session_state["page"] = "Candidates"
@@ -835,6 +943,20 @@ def cluster_chart(counts):
         .configure_view(strokeWidth=0)
         .configure_axis(grid=False)
     )
+
+
+def render_chart(chart):
+    """Keep chart labels legible against the dashboard's light cards."""
+    chart = (
+        chart.configure(background="#FFFFFF", font="Inter, sans-serif")
+        .configure_axis(
+            labelColor="#334155", titleColor="#0F172A",
+            labelFontSize=12, titleFontSize=13, labelLimit=150,
+            gridColor="#E6EBF2", domainColor="#94A3B8", tickColor="#94A3B8",
+        )
+        .configure_legend(labelColor="#334155", titleColor="#0F172A", labelFontSize=12)
+    )
+    st.altair_chart(chart, use_container_width=True, theme=None)
 
 
 def render_cluster_legend(counts):
@@ -925,7 +1047,7 @@ def page_dashboard(api_url, similar_top_k):
                 '<p class="card-title">Top Matched Candidates</p>', unsafe_allow_html=True
             )
             with head_right:
-                if st.button("View All Candidates →", key="all_candidates", use_container_width=True):
+                if st.button("View all →", key="all_candidates", use_container_width=True):
                     st.session_state["page"] = "Candidates"
                     st.rerun()
             if results:
@@ -938,12 +1060,12 @@ def page_dashboard(api_url, similar_top_k):
             head_left, head_right = st.columns([2, 1])
             head_left.markdown('<p class="card-title">Candidate Clusters</p>', unsafe_allow_html=True)
             with head_right:
-                if st.button("View All Clusters →", key="all_clusters", use_container_width=True):
+                if st.button("View all →", key="all_clusters", use_container_width=True):
                     st.session_state["page"] = "Clusters"
                     st.rerun()
             counts = cluster_counts(results)
             if counts:
-                st.altair_chart(cluster_chart(counts), use_container_width=True)
+                render_chart(cluster_chart(counts))
                 render_cluster_legend(counts)
             else:
                 render_empty("🧩", "Clusters appear once candidates have been screened.")
@@ -1014,7 +1136,7 @@ def page_screen(api_url, similar_top_k):
     for index, result in enumerate(sorted_results(results), start=1):
         with st.container(border=True):
             st.markdown(
-                f'<p class="card-title">{index}. {candidate_name(result)}'
+                f'<p class="card-title">{index}. {escape(candidate_name(result))}'
                 f' <span class="pill {pill_class(to_unit_score(result.get("match_score")))}">'
                 f'{percentage_text(result.get("match_score"))}</span></p>',
                 unsafe_allow_html=True,
@@ -1030,14 +1152,14 @@ def page_screen(api_url, similar_top_k):
                 st.markdown("**Matched skills**")
                 matched = result.get("matched_skills") or []
                 st.markdown(
-                    "".join(f'<span class="skill-chip ok">{s}</span>' for s in matched) or "—",
+                    "".join(f'<span class="skill-chip ok">{escape(str(s))}</span>' for s in matched) or "—",
                     unsafe_allow_html=True,
                 )
             with skill_right:
                 st.markdown("**Missing skills**")
                 missing = result.get("missing_skills") or []
                 st.markdown(
-                    "".join(f'<span class="skill-chip miss">{s}</span>' for s in missing) or "—",
+                    "".join(f'<span class="skill-chip miss">{escape(str(s))}</span>' for s in missing) or "—",
                     unsafe_allow_html=True,
                 )
 
@@ -1082,8 +1204,8 @@ def page_jobs():
         for index, job in enumerate(st.session_state["jobs"]):
             cols = st.columns([3, 1])
             cols[0].markdown(
-                f'<div class="td-strong">{job["title"]}</div>'
-                f'<div class="td-muted">{job["description"][:120].replace(chr(10), " ")}…</div>',
+                f'<div class="td-strong">{escape(job["title"])}</div>'
+                f'<div class="td-muted">{escape(job["description"][:120].replace(chr(10), " "))}…</div>',
                 unsafe_allow_html=True,
             )
             with cols[1]:
@@ -1100,7 +1222,7 @@ def page_candidates():
         st.markdown('<p class="card-title">All Candidates</p>', unsafe_allow_html=True)
         job = st.session_state.get("screened_job")
         if job:
-            st.markdown(f'<p class="card-sub">Ranked for {job}</p>', unsafe_allow_html=True)
+            st.markdown(f'<p class="card-sub">Ranked for {escape(str(job))}</p>', unsafe_allow_html=True)
         if results:
             render_candidate_table(results, key_prefix="cand")
         else:
@@ -1112,7 +1234,7 @@ def page_candidates():
         if match:
             with st.container(border=True):
                 st.markdown(
-                    f'<p class="card-title">{candidate_name(match)}</p>', unsafe_allow_html=True
+                    f'<p class="card-title">{escape(candidate_name(match))}</p>', unsafe_allow_html=True
                 )
                 metrics = st.columns(4)
                 metrics[0].metric("Match Score", percentage_text(match.get("match_score")))
@@ -1125,7 +1247,7 @@ def page_candidates():
                 st.markdown("**Matched skills**")
                 st.markdown(
                     "".join(
-                        f'<span class="skill-chip ok">{s}</span>'
+                        f'<span class="skill-chip ok">{escape(str(s))}</span>'
                         for s in (match.get("matched_skills") or [])
                     )
                     or "—",
@@ -1134,7 +1256,7 @@ def page_candidates():
                 st.markdown("**Missing skills**")
                 st.markdown(
                     "".join(
-                        f'<span class="skill-chip miss">{s}</span>'
+                        f'<span class="skill-chip miss">{escape(str(s))}</span>'
                         for s in (match.get("missing_skills") or [])
                     )
                     or "—",
@@ -1153,7 +1275,7 @@ def page_clusters():
             return
         chart_col, legend_col = st.columns([2, 1], gap="medium")
         with chart_col:
-            st.altair_chart(cluster_chart(counts), use_container_width=True)
+            render_chart(cluster_chart(counts))
         with legend_col:
             render_cluster_legend(counts)
 
@@ -1199,7 +1321,7 @@ def page_analytics():
                 .properties(height=max(200, 30 * len(frame)))
                 .configure_view(strokeWidth=0)
             )
-            st.altair_chart(chart, use_container_width=True)
+            render_chart(chart)
 
     with right:
         with st.container(border=True):
@@ -1227,7 +1349,7 @@ def page_analytics():
                     .properties(height=max(200, 30 * len(frame)))
                     .configure_view(strokeWidth=0)
                 )
-                st.altair_chart(chart, use_container_width=True)
+                render_chart(chart)
 
     with st.container(border=True):
         st.markdown('<p class="card-title">Screening Table</p>', unsafe_allow_html=True)
